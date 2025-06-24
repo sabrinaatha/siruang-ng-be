@@ -77,6 +77,9 @@ public class Peminjaman {
     @Column(name = "tanggal_ditolak")
     private LocalDate tanggalDitolak;
 
+    @Column(name = "tanggal_dibatalkan")
+    private LocalDate tanggalDibatalkan;
+
     @Column(name = "is_deleted", nullable = false)
     private boolean isDeleted = false;
 

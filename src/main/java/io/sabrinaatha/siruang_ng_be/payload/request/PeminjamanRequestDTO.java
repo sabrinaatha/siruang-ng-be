@@ -26,4 +26,5 @@ public class PeminjamanRequestDTO {
     private LocalDate tanggalDiverifikasi;
     private LocalDate tanggalDitolak;
     private LocalDate tanggalDisetujui;
+    private LocalDate tanggalDibatalkan;
 }

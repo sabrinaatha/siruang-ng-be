@@ -8,7 +8,6 @@ import io.sabrinaatha.siruang_ng_be.payload.response.PeminjamanResponseDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.RuanganResponseDTO;
 import io.sabrinaatha.siruang_ng_be.service.RuanganService;
 import jakarta.persistence.EntityNotFoundException;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -85,7 +84,12 @@ public class RuanganController {
             baseResponseDTO.setMessage("Permintaan tidak valid: " + e.getMessage());
             baseResponseDTO.setTimestamp(new Date());
             return new ResponseEntity<>(baseResponseDTO, HttpStatus.BAD_REQUEST);
-
+        } catch (NotFoundException e) {
+            // Menangani kasus jika tidak ada data
+            baseResponseDTO.setStatus(HttpStatus.NOT_FOUND.value());
+            baseResponseDTO.setMessage("Gagal mengambil data ruangan dengan id " + idRuangan + " karena data tidak ada.");
+            baseResponseDTO.setTimestamp(new Date());
+            return new ResponseEntity<>(baseResponseDTO, HttpStatus.NOT_FOUND);
         } catch (Exception e) {
             // Menangani semua jenis error lainnya
             baseResponseDTO.setStatus(HttpStatus.INTERNAL_SERVER_ERROR.value());

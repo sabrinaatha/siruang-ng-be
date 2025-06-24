@@ -40,8 +40,12 @@ public class RuanganServiceImpl implements RuanganService{
 
     @Override
     public RuanganResponseDTO getRuanganById(UUID idRuangan) {
-        Optional<Ruangan> ruangan = ruanganRepository.findById(idRuangan);
-        RuanganResponseDTO dto = ruanganToRuanganResponseDTO(ruangan.orElse(null));
+        Optional<Ruangan> optionalRuangan = ruanganRepository.findById(idRuangan);
+        Ruangan ruangan = optionalRuangan.orElse(null);
+        if (ruangan == null) {
+            throw new NotFoundException("Ruangan dengan id " + idRuangan + " tidak ada.");
+        }
+        RuanganResponseDTO dto = ruanganToRuanganResponseDTO(ruangan);
         return dto;
     }
 
@@ -55,9 +59,14 @@ public class RuanganServiceImpl implements RuanganService{
         }
 
         Ruangan ruangan = new Ruangan();
-        ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan());
+        if (ruanganRequestDTO.getStatusRuangan().toLowerCase().equals("enabled") || ruanganRequestDTO.getStatusRuangan().toLowerCase().equals("disabled")) {
+            ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan().toUpperCase());
+        } else {
+            throw new BadRequestException("Ruangan dengan status " + ruanganRequestDTO.getStatusRuangan() + " tidak sesuai.");
+        }
+
         ruangan.setTipeRuangan(ruanganRequestDTO.getTipeRuangan());
-        ruangan.setNamaRuangan(ruangan.getNamaRuangan());
+        ruangan.setNamaRuangan(ruanganRequestDTO.getNamaRuangan());
 
         var newRuangan = ruanganRepository.save(ruangan);
         return ruanganToRuanganResponseDTO(newRuangan);
@@ -69,15 +78,19 @@ public class RuanganServiceImpl implements RuanganService{
         Ruangan ruangan = optionalRuangan.orElseThrow(() -> new NotFoundException("Ruangan dengan ID: " + idRuangan + " tidak ditemukan "));
 
         Optional<Ruangan> checkExist = ruanganRepository.findByNamaRuangan(ruanganRequestDTO.getNamaRuangan());
-        Ruangan ExistingRoom = checkExist.orElse(null);
+        Ruangan existingRoom = checkExist.orElse(null);
 
-        if (ExistingRoom != null) {
+        if ((existingRoom != null) && (existingRoom.getNamaRuangan().toLowerCase().equals(ruanganRequestDTO.getNamaRuangan()))) {
             throw new BadRequestException("Nama ruangan yang diubah menjadi " + ruanganRequestDTO.getNamaRuangan() + " sudah ada.");
         }
 
         ruangan.setNamaRuangan(ruanganRequestDTO.getNamaRuangan());
         ruangan.setTipeRuangan(ruanganRequestDTO.getTipeRuangan());
-        ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan());
+        if (ruanganRequestDTO.getStatusRuangan().toLowerCase().equals("enabled") || ruanganRequestDTO.getStatusRuangan().toLowerCase().equals("disabled")) {
+            ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan().toUpperCase());
+        } else {
+            throw new BadRequestException("Ruangan dengan status " + ruanganRequestDTO.getStatusRuangan() + " tidak sesuai.");
+        }
 
         try {
             var updatedRuangan = ruanganRepository.save(ruangan);

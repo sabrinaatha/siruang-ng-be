@@ -44,8 +44,12 @@ public class PeminjamanServiceImpl implements PeminjamanService {
 
     @Override
     public PeminjamanResponseDTO getPeminjamanById(UUID idPeminjaman) {
-        Optional<Peminjaman> peminjaman = peminjamanRepository.findById(idPeminjaman);
-        PeminjamanResponseDTO dto = peminjamanToPeminjamanResponseDTO(peminjaman.orElse(null));
+        Optional<Peminjaman> optionalPeminjaman = peminjamanRepository.findById(idPeminjaman);
+        Peminjaman peminjaman = optionalPeminjaman.orElse(null);
+        if (peminjaman == null) {
+            throw new NotFoundException("Peminjaman dengan id " + idPeminjaman + " tidak ada.");
+        }
+        PeminjamanResponseDTO dto = peminjamanToPeminjamanResponseDTO(peminjaman);
         return dto;
     }
 
@@ -71,8 +75,8 @@ public class PeminjamanServiceImpl implements PeminjamanService {
                             !p.getTanggalMulai().isAfter(peminjamanRequestDTO.getTanggalSelesai());
 
             boolean waktuBentrok =
-                    p.getWaktuMulai().isBefore(peminjamanRequestDTO.getWaktuSelesai()) &&
-                            p.getWaktuSelesai().isAfter(peminjamanRequestDTO.getWaktuMulai());
+                    !p.getWaktuSelesai().isBefore(peminjamanRequestDTO.getWaktuMulai()) &&
+                            !p.getWaktuMulai().isAfter(peminjamanRequestDTO.getWaktuSelesai());
 
             return tanggalBentrok && waktuBentrok;
         });
@@ -94,12 +98,15 @@ public class PeminjamanServiceImpl implements PeminjamanService {
         peminjaman.setJenisKegiatan(peminjamanRequestDTO.getJenisKegiatan());
         peminjaman.setTujuan(peminjamanRequestDTO.getTujuan());
 
-        peminjaman.setStatusPeminjaman(peminjamanRequestDTO.getStatusPeminjaman());
+        peminjaman.setStatusPeminjaman("DIAJUKAN");
         peminjaman.setPeminjam(peminjamanRequestDTO.getPeminjam());
         peminjaman.setOrganisasi(peminjamanRequestDTO.getOrganisasi());
+        peminjaman.setJumlahPeserta(peminjamanRequestDTO.getJumlahPeserta());
+
         peminjaman.setTanggalDiverifikasi(peminjamanRequestDTO.getTanggalDiverifikasi());
         peminjaman.setTanggalDitolak(peminjamanRequestDTO.getTanggalDitolak());
         peminjaman.setTanggalDisetujui(peminjamanRequestDTO.getTanggalDisetujui());
+        peminjaman.setTanggalDibatalkan(peminjamanRequestDTO.getTanggalDibatalkan());
 
         var peminjamanBaru = peminjamanRepository.save(peminjaman);
         return peminjamanToPeminjamanResponseDTO(peminjamanBaru);
@@ -122,6 +129,7 @@ public class PeminjamanServiceImpl implements PeminjamanService {
         }
 
         List<Peminjaman> existingPeminjaman = peminjamanRepository.findAll().stream()
+                .filter(p -> !p.getIdPeminjaman().equals(idPeminjaman))
                 .filter(p -> p.getRuangan().getIdRuangan().equals(peminjamanRequestDTO.getIdRuangan()))
                 .filter(p -> List.of("DISETUJUI").contains(p.getStatusPeminjaman()))
                 .collect(Collectors.toList());
@@ -158,9 +166,12 @@ public class PeminjamanServiceImpl implements PeminjamanService {
         peminjaman.setStatusPeminjaman(peminjamanRequestDTO.getStatusPeminjaman());
         peminjaman.setPeminjam(peminjamanRequestDTO.getPeminjam());
         peminjaman.setOrganisasi(peminjamanRequestDTO.getOrganisasi());
+        peminjaman.setJumlahPeserta(peminjamanRequestDTO.getJumlahPeserta());
+
         peminjaman.setTanggalDiverifikasi(peminjamanRequestDTO.getTanggalDiverifikasi());
         peminjaman.setTanggalDitolak(peminjamanRequestDTO.getTanggalDitolak());
         peminjaman.setTanggalDisetujui(peminjamanRequestDTO.getTanggalDisetujui());
+        peminjaman.setTanggalDibatalkan(peminjamanRequestDTO.getTanggalDibatalkan());
 
         try {
             var updatedPeminjaman = peminjamanRepository.save(peminjaman);
@@ -181,8 +192,15 @@ public class PeminjamanServiceImpl implements PeminjamanService {
                 existingPeminjaman.setTanggalDiverifikasi(today);
             } else if (status.toLowerCase().equals("ditolak")) {
                 existingPeminjaman.setTanggalDitolak(today);
+            } else if (status.toLowerCase().equals("diajukan")) {
+                existingPeminjaman.setTanggalDiverifikasi(null);
+                existingPeminjaman.setTanggalDitolak(null);
+                existingPeminjaman.setTanggalDisetujui(null);
+                existingPeminjaman.setTanggalDibatalkan(null);
             } else if (status.toLowerCase().equals("disetujui")) {
                 existingPeminjaman.setTanggalDisetujui(today);
+            } else if (status.toLowerCase().equals("dibatalkan")) {
+                existingPeminjaman.setTanggalDibatalkan(today);
             } else {
                 throw new BadRequestException("Status tidak tepat");
             }
