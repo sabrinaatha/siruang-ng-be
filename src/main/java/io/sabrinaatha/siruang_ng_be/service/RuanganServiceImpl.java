@@ -1,7 +1,10 @@
 package io.sabrinaatha.siruang_ng_be.service;
 
+import io.sabrinaatha.siruang_ng_be.exception.BadRequestException;
+import io.sabrinaatha.siruang_ng_be.exception.NotFoundException;
 import io.sabrinaatha.siruang_ng_be.model.Peminjaman;
 import io.sabrinaatha.siruang_ng_be.model.Ruangan;
+import io.sabrinaatha.siruang_ng_be.payload.request.RuanganRequestDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.PeminjamanResponseDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.RuanganResponseDTO;
 import io.sabrinaatha.siruang_ng_be.repository.RuanganRepository;
@@ -40,6 +43,48 @@ public class RuanganServiceImpl implements RuanganService{
         Optional<Ruangan> ruangan = ruanganRepository.findById(idRuangan);
         RuanganResponseDTO dto = ruanganToRuanganResponseDTO(ruangan.orElse(null));
         return dto;
+    }
+
+    @Override
+    public RuanganResponseDTO addRuangan(RuanganRequestDTO ruanganRequestDTO) {
+        Optional<Ruangan> checkExist = ruanganRepository.findByNamaRuangan(ruanganRequestDTO.getNamaRuangan());
+        Ruangan ExistingRoom = checkExist.orElse(null);
+
+        if (ExistingRoom != null) {
+            throw new BadRequestException("Ruangan dengan nama " + ruanganRequestDTO.getNamaRuangan() + " sudah ada.");
+        }
+
+        Ruangan ruangan = new Ruangan();
+        ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan());
+        ruangan.setTipeRuangan(ruanganRequestDTO.getTipeRuangan());
+        ruangan.setNamaRuangan(ruangan.getNamaRuangan());
+
+        var newRuangan = ruanganRepository.save(ruangan);
+        return ruanganToRuanganResponseDTO(newRuangan);
+    }
+
+    @Override
+    public RuanganResponseDTO updateRuangan(UUID idRuangan, RuanganRequestDTO ruanganRequestDTO) {
+        Optional<Ruangan> optionalRuangan = ruanganRepository.findById(idRuangan);
+        Ruangan ruangan = optionalRuangan.orElseThrow(() -> new NotFoundException("Ruangan dengan ID: " + idRuangan + " tidak ditemukan "));
+
+        Optional<Ruangan> checkExist = ruanganRepository.findByNamaRuangan(ruanganRequestDTO.getNamaRuangan());
+        Ruangan ExistingRoom = checkExist.orElse(null);
+
+        if (ExistingRoom != null) {
+            throw new BadRequestException("Nama ruangan yang diubah menjadi " + ruanganRequestDTO.getNamaRuangan() + " sudah ada.");
+        }
+
+        ruangan.setNamaRuangan(ruanganRequestDTO.getNamaRuangan());
+        ruangan.setTipeRuangan(ruanganRequestDTO.getTipeRuangan());
+        ruangan.setStatusRuangan(ruanganRequestDTO.getStatusRuangan());
+
+        try {
+            var updatedRuangan = ruanganRepository.save(ruangan);
+            return ruanganToRuanganResponseDTO(updatedRuangan);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update Ruangan: " + e.getMessage(), e);
+        }
     }
 
     @Override

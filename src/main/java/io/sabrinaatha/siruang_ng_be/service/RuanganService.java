@@ -1,5 +1,6 @@
 package io.sabrinaatha.siruang_ng_be.service;
 
+import io.sabrinaatha.siruang_ng_be.payload.request.RuanganRequestDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.PeminjamanResponseDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.RuanganResponseDTO;
 
@@ -12,4 +13,6 @@ public interface RuanganService {
     void deleteRuangan(UUID idRuangan);
     RuanganResponseDTO changeStatusRuangan(UUID idRuangan, String status);
     List<PeminjamanResponseDTO> getAllJadwalRuangan(UUID idRuangan);
+    RuanganResponseDTO addRuangan(RuanganRequestDTO ruanganRequestDTO);
+    RuanganResponseDTO updateRuangan(UUID idRuangan, RuanganRequestDTO ruanganRequestDTO);
 }

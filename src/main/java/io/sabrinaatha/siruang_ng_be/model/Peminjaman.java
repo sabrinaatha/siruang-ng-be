@@ -78,7 +78,7 @@ public class Peminjaman {
     private LocalDate tanggalDitolak;
 
     @Column(name = "is_deleted", nullable = false)
-    private boolean isDeleted;
+    private boolean isDeleted = false;
 
     public boolean getDeleted() {
         return isDeleted;

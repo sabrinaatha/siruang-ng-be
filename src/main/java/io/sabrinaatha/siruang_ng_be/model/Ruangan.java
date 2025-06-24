@@ -26,7 +26,7 @@ public class Ruangan {
     @GenericGenerator(name = "UUID", strategy = "org.hibernate.id.UUIDGenerator")
     private UUID idRuangan;
 
-    @Column(name = "nama_ruangan", nullable = false)
+    @Column(name = "nama_ruangan", nullable = false, unique = true)
     private String namaRuangan;
 
     @Column(name = "status_ruangan", nullable = false)

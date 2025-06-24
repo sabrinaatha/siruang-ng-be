@@ -1,10 +1,14 @@
 package io.sabrinaatha.siruang_ng_be.service;
 
 import io.sabrinaatha.siruang_ng_be.exception.BadRequestException;
+import io.sabrinaatha.siruang_ng_be.exception.NotFoundException;
 import io.sabrinaatha.siruang_ng_be.model.Peminjaman;
+import io.sabrinaatha.siruang_ng_be.model.Ruangan;
+import io.sabrinaatha.siruang_ng_be.payload.request.PeminjamanRequestDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.PeminjamanResponseDTO;
 import io.sabrinaatha.siruang_ng_be.payload.response.RuanganResponseDTO;
 import io.sabrinaatha.siruang_ng_be.repository.PeminjamanRepository;
+import io.sabrinaatha.siruang_ng_be.repository.RuanganRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import jakarta.persistence.EntityNotFoundException;
@@ -23,6 +27,9 @@ public class PeminjamanServiceImpl implements PeminjamanService {
     @Autowired
     private PeminjamanRepository peminjamanRepository;
 
+    @Autowired
+    private RuanganRepository ruanganRepository;
+
     @Override
     public List<PeminjamanResponseDTO> getAllPeminjaman() {
         List<Peminjaman> listPeminjaman = peminjamanRepository.findAll();
@@ -40,6 +47,127 @@ public class PeminjamanServiceImpl implements PeminjamanService {
         Optional<Peminjaman> peminjaman = peminjamanRepository.findById(idPeminjaman);
         PeminjamanResponseDTO dto = peminjamanToPeminjamanResponseDTO(peminjaman.orElse(null));
         return dto;
+    }
+
+    @Override
+    public PeminjamanResponseDTO addPeminjaman(PeminjamanRequestDTO peminjamanRequestDTO) {
+        Peminjaman peminjaman = new Peminjaman();
+
+        Optional<Ruangan> optionalRuangan = ruanganRepository.findById(peminjamanRequestDTO.getIdRuangan());
+        Ruangan ruangan = optionalRuangan.orElse(null);
+
+        if (ruangan == null) {
+            throw new NotFoundException("Ruangan dengan id " + peminjamanRequestDTO.getIdRuangan() + " tidak ada.");
+        }
+
+        List<Peminjaman> existingPeminjaman = peminjamanRepository.findAll().stream()
+                .filter(p -> p.getRuangan().getIdRuangan().equals(peminjamanRequestDTO.getIdRuangan()))
+                .filter(p -> List.of("DISETUJUI").contains(p.getStatusPeminjaman()))
+                .collect(Collectors.toList());
+
+        boolean isConflict = existingPeminjaman.stream().anyMatch(p -> {
+            boolean tanggalBentrok =
+                    !p.getTanggalSelesai().isBefore(peminjamanRequestDTO.getTanggalMulai()) &&
+                            !p.getTanggalMulai().isAfter(peminjamanRequestDTO.getTanggalSelesai());
+
+            boolean waktuBentrok =
+                    p.getWaktuMulai().isBefore(peminjamanRequestDTO.getWaktuSelesai()) &&
+                            p.getWaktuSelesai().isAfter(peminjamanRequestDTO.getWaktuMulai());
+
+            return tanggalBentrok && waktuBentrok;
+        });
+
+        if (isConflict) {
+            throw new BadRequestException("Ruangan sudah dipinjam pada waktu yang diminta.");
+        }
+
+        peminjaman.setRuangan(ruangan);
+
+        peminjaman.setTanggalMulai(peminjamanRequestDTO.getTanggalMulai());
+        peminjaman.setTanggalSelesai(peminjamanRequestDTO.getTanggalSelesai());
+        peminjaman.setTanggalPinjam(peminjamanRequestDTO.getTanggalPinjam());
+
+        peminjaman.setWaktuMulai(peminjamanRequestDTO.getWaktuMulai());
+        peminjaman.setWaktuSelesai(peminjamanRequestDTO.getWaktuSelesai());
+
+        peminjaman.setKegiatan(peminjamanRequestDTO.getKegiatan());
+        peminjaman.setJenisKegiatan(peminjamanRequestDTO.getJenisKegiatan());
+        peminjaman.setTujuan(peminjamanRequestDTO.getTujuan());
+
+        peminjaman.setStatusPeminjaman(peminjamanRequestDTO.getStatusPeminjaman());
+        peminjaman.setPeminjam(peminjamanRequestDTO.getPeminjam());
+        peminjaman.setOrganisasi(peminjamanRequestDTO.getOrganisasi());
+        peminjaman.setTanggalDiverifikasi(peminjamanRequestDTO.getTanggalDiverifikasi());
+        peminjaman.setTanggalDitolak(peminjamanRequestDTO.getTanggalDitolak());
+        peminjaman.setTanggalDisetujui(peminjamanRequestDTO.getTanggalDisetujui());
+
+        var peminjamanBaru = peminjamanRepository.save(peminjaman);
+        return peminjamanToPeminjamanResponseDTO(peminjamanBaru);
+    }
+
+    @Override
+    public PeminjamanResponseDTO updatePeminjaman(UUID idPeminjaman, PeminjamanRequestDTO peminjamanRequestDTO) {
+        Optional<Peminjaman> optionalPeminjaman = peminjamanRepository.findById(idPeminjaman);
+        Peminjaman peminjaman = optionalPeminjaman.orElse(null);
+
+        if (peminjaman == null) {
+            throw new NotFoundException("Peminjaman dengan id " + idPeminjaman + " tidak ada.");
+        }
+
+        Optional<Ruangan> optionalRuangan = ruanganRepository.findById(peminjamanRequestDTO.getIdRuangan());
+        Ruangan ruangan = optionalRuangan.orElse(null);
+
+        if (ruangan == null) {
+            throw new NotFoundException("Ruangan dengan id " + peminjamanRequestDTO.getIdRuangan() + " tidak ada.");
+        }
+
+        List<Peminjaman> existingPeminjaman = peminjamanRepository.findAll().stream()
+                .filter(p -> p.getRuangan().getIdRuangan().equals(peminjamanRequestDTO.getIdRuangan()))
+                .filter(p -> List.of("DISETUJUI").contains(p.getStatusPeminjaman()))
+                .collect(Collectors.toList());
+
+        boolean isConflict = existingPeminjaman.stream().anyMatch(p -> {
+            boolean tanggalBentrok =
+                    !p.getTanggalSelesai().isBefore(peminjamanRequestDTO.getTanggalMulai()) &&
+                            !p.getTanggalMulai().isAfter(peminjamanRequestDTO.getTanggalSelesai());
+
+            boolean waktuBentrok =
+                    p.getWaktuMulai().isBefore(peminjamanRequestDTO.getWaktuSelesai()) &&
+                            p.getWaktuSelesai().isAfter(peminjamanRequestDTO.getWaktuMulai());
+
+            return tanggalBentrok && waktuBentrok;
+        });
+
+        if (isConflict) {
+            throw new BadRequestException("Perubahan pada tanggal dan waktu ruangan tidak dapat dilakukan karena ruangan sudah dipinjam pada waktu yang diminta.");
+        }
+
+        peminjaman.setRuangan(ruangan);
+
+        peminjaman.setTanggalMulai(peminjamanRequestDTO.getTanggalMulai());
+        peminjaman.setTanggalSelesai(peminjamanRequestDTO.getTanggalSelesai());
+        peminjaman.setTanggalPinjam(peminjamanRequestDTO.getTanggalPinjam());
+
+        peminjaman.setWaktuMulai(peminjamanRequestDTO.getWaktuMulai());
+        peminjaman.setWaktuSelesai(peminjamanRequestDTO.getWaktuSelesai());
+
+        peminjaman.setKegiatan(peminjamanRequestDTO.getKegiatan());
+        peminjaman.setJenisKegiatan(peminjamanRequestDTO.getJenisKegiatan());
+        peminjaman.setTujuan(peminjamanRequestDTO.getTujuan());
+
+        peminjaman.setStatusPeminjaman(peminjamanRequestDTO.getStatusPeminjaman());
+        peminjaman.setPeminjam(peminjamanRequestDTO.getPeminjam());
+        peminjaman.setOrganisasi(peminjamanRequestDTO.getOrganisasi());
+        peminjaman.setTanggalDiverifikasi(peminjamanRequestDTO.getTanggalDiverifikasi());
+        peminjaman.setTanggalDitolak(peminjamanRequestDTO.getTanggalDitolak());
+        peminjaman.setTanggalDisetujui(peminjamanRequestDTO.getTanggalDisetujui());
+
+        try {
+            var updatedPeminjaman = peminjamanRepository.save(peminjaman);
+            return peminjamanToPeminjamanResponseDTO(updatedPeminjaman);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to update Peminjaman: " + e.getMessage(), e);
+        }
     }
 
     @Override
