@@ -4,8 +4,7 @@ spring:
   application:
     name: siruang-ng-be
   datasource:
-    # url: jdbc:postgresql://localhost:35001/siruangng-dev
-    url: jdbc:postgresql://localhost:15001/siruangng-dev
+    url: jdbc:postgresql://localhost:35001/siruangng-dev
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
